@@ -1,0 +1,1103 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f8fafc">
+  <meta name="description" content="A hands-on cybersecurity lab demonstrating Active Directory, Windows endpoint monitoring, Splunk SIEM, authentication event investigation and Atomic Red Team testing.">
+  <title>Active Directory + Splunk | Cybersecurity Lab</title>
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-soft: #f1f5f9;
+      --text: #172033;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #4f46e5;
+      --accent-dark: #3730a3;
+      --green: #047857;
+      --radius: 18px;
+      --shadow: 0 12px 35px rgba(15, 23, 42, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; scroll-padding-top: 85px; }
+
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    img { display: block; max-width: 100%; }
+
+    .container {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      font-weight: 800;
+      letter-spacing: -.5px;
+      white-space: nowrap;
+    }
+
+    .brand span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      font-size: .9rem;
+      color: var(--muted);
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    .hero {
+      padding: 95px 0 78px;
+      background:
+        radial-gradient(ellipse at 80% 10%, #e0e7ff 0%, transparent 38%),
+        radial-gradient(ellipse at 10% 85%, #dbeafe 0%, transparent 32%),
+        var(--bg);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid #c7d2fe;
+      background: #eef2ff;
+      color: var(--accent-dark);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4.7rem);
+      line-height: 1.08;
+      letter-spacing: -2.7px;
+      max-width: 850px;
+      margin: 24px 0;
+    }
+
+    h1 span { color: var(--accent); }
+
+    .hero p {
+      max-width: 720px;
+      font-size: 1.12rem;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 9px;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-weight: 700;
+      font-size: .94rem;
+      border: 1px solid var(--border);
+      background: white;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .button.primary {
+      color: white;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 45px;
+    }
+
+    .stat {
+      padding: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.8);
+      border-radius: 14px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.35rem;
+      letter-spacing: -.4px;
+    }
+
+    .stat span { color: var(--muted); font-size: .86rem; }
+
+    section { padding: 76px 0; }
+
+    section.alt { background: #f1f5f9; }
+
+    .section-heading {
+      max-width: 720px;
+      margin-bottom: 32px;
+    }
+
+    .kicker {
+      color: var(--accent);
+      text-transform: uppercase;
+      font-size: .77rem;
+      letter-spacing: 1.5px;
+      font-weight: 800;
+    }
+
+    h2 {
+      margin: 8px 0 12px;
+      font-size: clamp(1.8rem, 4vw, 2.65rem);
+      line-height: 1.2;
+      letter-spacing: -1px;
+    }
+
+    .section-heading p, .muted { color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: 0 4px 18px rgba(15,23,42,.025);
+    }
+
+    .card h3 { margin: 10px 0 8px; font-size: 1.12rem; }
+
+    .card p { color: var(--muted); margin: 0; font-size: .94rem; }
+
+    .icon {
+      width: 43px;
+      height: 43px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: #eef2ff;
+      font-size: 1.25rem;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      padding: 5px 10px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      color: #475569;
+      border-radius: 7px;
+      font-size: .78rem;
+      font-weight: 650;
+    }
+
+    .architecture {
+      padding: 25px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: white;
+    }
+
+    .architecture img {
+      width: 100%;
+      max-height: 650px;
+      object-fit: contain;
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+
+    .caption {
+      margin: 13px 0 0;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .flow-step {
+      position: relative;
+      padding: 18px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .flow-step strong { display: block; margin-bottom: 6px; }
+    .flow-step span { color: var(--muted); font-size: .85rem; }
+
+    .event-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .event {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: white;
+      padding: 25px;
+    }
+
+    .event-number {
+      font-size: 2.2rem;
+      line-height: 1.2;
+      font-weight: 850;
+      letter-spacing: -1px;
+    }
+
+    .event small { color: var(--muted); }
+
+    .event.success { border-top: 4px solid #10b981; }
+    .event.failure { border-top: 4px solid #f59e0b; }
+
+    .note {
+      padding: 16px 18px;
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: .92rem;
+      margin-top: 20px;
+    }
+
+    .warning {
+      padding: 16px 18px;
+      border: 1px solid #fed7aa;
+      border-radius: 12px;
+      background: #fff7ed;
+      color: #9a3412;
+      font-size: .92rem;
+      margin-top: 16px;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .shot {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 15px;
+    }
+
+    .shot img {
+      width: 100%;
+      height: 255px;
+      object-fit: contain;
+      background: #e9eef5;
+      cursor: zoom-in;
+      transition: transform .25s;
+    }
+
+    .shot img:hover { transform: scale(1.015); }
+
+    .shot-info { padding: 15px 17px; }
+
+    .shot-info strong { display: block; }
+
+    .shot-info span {
+      color: var(--muted);
+      font-size: .84rem;
+    }
+
+    .text-link {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: .9rem;
+    }
+
+    .text-link:hover { text-decoration: underline; }
+
+    .challenge-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .challenge {
+      display: grid;
+      grid-template-columns: 190px 1fr;
+      gap: 20px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 12px;
+    }
+
+    .challenge strong { font-size: .95rem; }
+    .challenge p { margin: 0; color: var(--muted); font-size: .93rem; }
+
+    .cta {
+      background: #172033;
+      color: white;
+      border-radius: 22px;
+      padding: 38px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 25px;
+    }
+
+    .cta h2 { margin-top: 0; }
+    .cta p { color: #cbd5e1; margin-bottom: 0; }
+    .cta .button { flex-shrink: 0; }
+
+    footer {
+      padding: 30px 0;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      place-items: center;
+      background: rgba(15,23,42,.9);
+      padding: 25px;
+    }
+
+    .lightbox.open { display: grid; }
+
+    .lightbox img {
+      max-width: min(1200px, 95vw);
+      max-height: 85vh;
+      object-fit: contain;
+    }
+
+    .lightbox button {
+      position: absolute;
+      top: 18px;
+      right: 22px;
+      padding: 8px 13px;
+      background: white;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    @media (max-width: 800px) {
+      .nav-inner { align-items: flex-start; padding: 16px 0; flex-direction: column; gap: 12px; }
+      .nav-links { gap: 12px; }
+      .hero { padding: 65px 0 55px; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cta { align-items: flex-start; flex-direction: column; padding: 28px; }
+    }
+
+    @media (max-width: 560px) {
+      .container { width: min(100% - 28px, 1120px); }
+      h1 { letter-spacing: -1.5px; }
+      section { padding: 55px 0; }
+      .grid, .event-grid, .gallery { grid-template-columns: 1fr; }
+      .challenge { grid-template-columns: 1fr; gap: 6px; }
+      .shot img { height: 220px; }
+      .architecture { padding: 12px; }
+      .nav-links { font-size: .82rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="#home">AD <span>+</span> Splunk</a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="#overview">Overview</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#detection">Detection</a>
+        <a href="#testing">Testing</a>
+        <a href="#gallery">Screenshots</a>
+        <a href="#learnings">Learnings</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="container">
+        <span class="eyebrow"><span class="dot"></span> Hands-on cybersecurity lab</span>
+        <h1>From Windows events to <span>security insights.</span></h1>
+        <p>
+          A practical home lab combining Windows Active Directory, endpoint
+          telemetry, Splunk SIEM and controlled security testing to explore
+          authentication monitoring, event investigation and detection workflows.
+        </p>
+
+        <div class="actions">
+          <a class="button primary"
+             href="https://github.com/yasheesh10/Active-Directory-Splunk"
+             target="_blank" rel="noopener noreferrer">
+            View GitHub repository ↗
+          </a>
+          <a class="button" href="#architecture">Explore the architecture ↓</a>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <strong>Active Directory</strong>
+            <span>Centralised identity and domain services</span>
+          </div>
+          <div class="stat">
+            <strong>Splunk SIEM</strong>
+            <span>Centralised log collection and investigation</span>
+          </div>
+          <div class="stat">
+            <strong>Windows Events</strong>
+            <span>Authentication telemetry analysis</span>
+          </div>
+          <div class="stat">
+            <strong>Red Team Testing</strong>
+            <span>Controlled lab simulations</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="overview">
+      <div class="container">
+        <div class="section-heading">
+          <span class="kicker">01 / Project overview</span>
+          <h2>Building a miniature security monitoring environment</h2>
+          <p>
+            The objective was to understand how a Windows domain environment
+            generates security events, how endpoint logs reach a SIEM, and how
+            analysts can investigate suspicious activity using collected telemetry.
+          </p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <div class="icon">🏢</div>
+            <h3>Identity infrastructure</h3>
+            <p>
+              Configured a Windows Server domain controller and domain-joined
+              Windows endpoint to explore users, authentication and domain services.
+            </p>
+            <div class="tag-list">
+              <span class="tag">Windows Server 2022</span>
+              <span class="tag">Active Directory</span>
+              <span class="tag">DNS</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="icon">📊</div>
+            <h3>Log collection and SIEM</h3>
+            <p>
+              Set up Splunk Enterprise and Universal Forwarders to collect
+              Windows telemetry for centralised searching and investigation.
+            </p>
+            <div class="tag-list">
+              <span class="tag">Splunk</span>
+              <span class="tag">Universal Forwarder</span>
+              <span class="tag">Sysmon</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="icon">🔎</div>
+            <h3>Security testing</h3>
+            <p>
+              Explored RDP authentication testing and selected Atomic Red Team
+              simulations, then examined the telemetry available for analysis.
+            </p>
+            <div class="tag-list">
+              <span class="tag">Kali Linux</span>
+              <span class="tag">Hydra</span>
+              <span class="tag">Crowbar</span>
+              <span class="tag">Atomic Red Team</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="architecture">
+      <div class="container">
+        <div class="section-heading">
+          <span class="kicker">02 / Lab architecture</span>
+          <h2>How the lab components fit together</h2>
+          <p>
+            The environment uses separate virtual machines on an isolated lab
+            network. The diagram below documents the intended topology.
+          </p>
+        </div>
+
+        <div class="architecture">
+          <img
+            src="screenshots/Network%20Flow%20Diagram.jpg"
+            alt="Network flow diagram for the Active Directory and Splunk lab"
+            loading="lazy">
+          <p class="caption">
+            Network Flow Diagram — stored in the repository's screenshots folder.
+          </p>
+        </div>
+
+        <div class="flow">
+          <div class="flow-step">
+            <strong>01. Generate events</strong>
+            <span>Windows authentication and endpoint activity produce logs.</span>
+          </div>
+          <div class="flow-step">
+            <strong>02. Collect telemetry</strong>
+            <span>Forwarders send configured event data to Splunk.</span>
+          </div>
+          <div class="flow-step">
+            <strong>03. Investigate</strong>
+            <span>Search events and inspect fields, timestamps and event IDs.</span>
+          </div>
+          <div class="flow-step">
+            <strong>04. Validate visibility</strong>
+            <span>Compare expected test activity with the telemetry actually received.</span>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Lab configuration:</strong> The documented setup includes a
+          Windows Server 2022 domain controller, a Windows target, Kali Linux
+          and an Ubuntu-based Splunk server. This portfolio page is static and
+          does not connect to those machines.
+        </div>
+      </div>
+    </section>
+
+    <section id="stack">
+      <div class="container">
+        <div class="section-heading">
+          <span class="kicker">03 / Technology stack</span>
+          <h2>Tools used in the lab</h2>
+          <p>Infrastructure, monitoring, testing and documentation tools.</p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <div class="icon">🖥️</div>
+            <h3>Virtualisation and systems</h3>
+            <p>VirtualBox, Windows Server 2022, Windows 10 Pro, Ubuntu and Kali Linux.</p>
+          </article>
+
+          <article class="card">
+            <div class="icon">📈</div>
+            <h3>Monitoring and telemetry</h3>
+            <p>Splunk Enterprise, Splunk Universal Forwarder, Sysmon and Olaf Hartong's Sysmon configuration.</p>
+          </article>
+
+          <article class="card">
+            <div class="icon">🧪</div>
+            <h3>Security testing</h3>
+            <p>Hydra, Crowbar, FreeRDP and Atomic Red Team for controlled testing in the lab.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="detection">
+      <div class="container">
+        <div class="section-heading">
+          <span class="kicker">04 / Event investigation</span>
+          <h2>Authentication events in Windows</h2>
+          <p>
+            Windows Security logs can help distinguish successful logons from
+            failed authentication attempts. These event IDs were part of the
+            investigation workflow in this lab.
+          </p>
+        </div>
+
+        <div class="event-grid">
+          <article class="event success">
+            <div class="event-number">4624</div>
+            <small>Successful logon</small>
+            <h3>Investigating successful authentication</h3>
+            <p class="muted">
+              Review the account, logon type, timestamp, workstation and
+              available source network information to understand a logon event.
+            </p>
+          </article>
+
+          <article class="event failure">
+            <div class="event-number">4625</div>
+            <small>Failed logon</small>
+            <h3>Investigating failed authentication</h3>
+            <p class="muted">
+              Examine repeated failures, account names, failure reasons and
+              source information to assess whether activity warrants further investigation.
+            </p>
+          </article>
+        </div>
+
+        <div class="note">
+          <strong>Analyst takeaway:</strong> An event ID alone does not establish
+          malicious activity. Interpret it in context, correlate related events,
+          and verify the fields and timestamps available in the collected logs.
+        </div>
+      </div>
+    </section>
+
+    <section id="testing">
+      <div class="container">
+        <div class="section-heading">
+          <span class="kicker">05 / Controlled testing</span>
+          <h2>Testing detection visibility, not just execution</h2>
+          <p>
+            A useful security test checks both whether an action ran and whether
+            the expected evidence was collected. The outcomes below reflect the
+            observations recorded during this project.
+          </p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <div class="icon">🔐</div>
+            <h3>RDP authentication testing</h3>
+            <p>
+              Used Hydra and Crowbar to explore failed RDP authentication
+              attempts in the lab. Crowbar did not establish the expected
+              successful session, so FreeRDP was used to establish a successful
+              RDP session separately.
+            </p>
+            <div class="tag-list">
+              <span class="tag">4625 investigation</span>
+              <span class="tag">4624 investigation</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="icon">⌨️</div>
+            <h3>PowerShell simulation — T1059.001</h3>
+            <p>
+              Executed the selected Atomic Red Team PowerShell test in the lab
+              and observed PowerShell-related telemetry in Splunk.
+            </p>
+            <div class="tag-list">
+              <span class="tag">Atomic Red Team</span>
+              <span class="tag">PowerShell</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="icon">👤</div>
+            <h3>Local account simulation — T1136.001</h3>
+            <p>
+              Attempted the selected local-account creation test. The expected
+              account-creation telemetry was not visible in Splunk during the
+              investigation, leaving a detection and data-collection gap to resolve.
+            </p>
+            <div class="tag-list">
+              <span class="tag">Telemetry validation</span>
+              <span class="tag">Detection gap</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="warning">
+          <strong>Important distinction:</strong> The missing account-creation
+          event does not prove the action was undetected by every available
+          source. It means the expected telemetry was not visible in the Splunk
+          investigation performed at that time. Further validation is needed.
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="gallery">
+      <div class="container">
+        <div class="section-heading">
+          <span class="kicker">06 / Evidence gallery</span>
+          <h2>Inside the lab</h2>
+          <p>
+            Selected screenshots from the project repository. Select an image
+            to view it larger. All images are loaded from GitHub.
+          </p>
+        </div>
+
+        <div class="gallery">
+          <article class="shot">
+            <img src="screenshots/ad-project-2.png"
+                 alt="Active Directory lab screenshot 1" loading="lazy">
+            <div class="shot-info">
+              <strong>Active Directory setup</strong>
+              <span>Domain infrastructure and configuration evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/ad-project-3.png"
+                 alt="Active Directory lab screenshot 2" loading="lazy">
+            <div class="shot-info">
+              <strong>Domain environment</strong>
+              <span>Additional Windows domain lab evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/ad-project-5.png"
+                 alt="Active Directory lab screenshot 3" loading="lazy">
+            <div class="shot-info">
+              <strong>Windows configuration</strong>
+              <span>Domain and endpoint setup evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/ad-project-6.png"
+                 alt="Active Directory lab screenshot 4" loading="lazy">
+            <div class="shot-info">
+              <strong>Lab validation</strong>
+              <span>Further Windows infrastructure evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/kali-1.png"
+                 alt="Kali Linux screenshot 1" loading="lazy">
+            <div class="shot-info">
+              <strong>Kali Linux</strong>
+              <span>Security testing environment</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/kali-2.png"
+                 alt="Kali Linux screenshot 2" loading="lazy">
+            <div class="shot-info">
+              <strong>Testing workflow</strong>
+              <span>Evidence from the Kali lab</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/kali-3.png"
+                 alt="Kali Linux screenshot 3" loading="lazy">
+            <div class="shot-info">
+              <strong>Security assessment</strong>
+              <span>Additional testing evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/kali-4.png"
+                 alt="Kali Linux screenshot 4" loading="lazy">
+            <div class="shot-info">
+              <strong>Lab troubleshooting</strong>
+              <span>Supporting security lab evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/kali-network.png"
+                 alt="Kali Linux network configuration" loading="lazy">
+            <div class="shot-info">
+              <strong>Network configuration</strong>
+              <span>Kali lab connectivity evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/splunk-1.png"
+                 alt="Splunk screenshot 1" loading="lazy">
+            <div class="shot-info">
+              <strong>Splunk SIEM</strong>
+              <span>SIEM configuration and interface evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/splunk-3.png"
+                 alt="Splunk screenshot 2" loading="lazy">
+            <div class="shot-info">
+              <strong>Log investigation</strong>
+              <span>Evidence from Splunk analysis</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/splunk-5.png"
+                 alt="Splunk screenshot 3" loading="lazy">
+            <div class="shot-info">
+              <strong>Event analysis</strong>
+              <span>Collected telemetry and investigation</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/splunk-6.png"
+                 alt="Splunk screenshot 4" loading="lazy">
+            <div class="shot-info">
+              <strong>Security monitoring</strong>
+              <span>Additional SIEM evidence</span>
+            </div>
+          </article>
+
+          <article class="shot">
+            <img src="screenshots/splunk-7.png"
+                 alt="Splunk screenshot 5" loading="lazy">
+            <div class="shot-info">
+              <strong>Monitoring workflow</strong>
+              <span>Further log analysis evidence</span>
+            </div>
+          </article>
+        </div>
+
+        <p class="caption">
+          Screenshot descriptions are intentionally general. The images
+          themselves provide the underlying evidence.
+        </p>
+      </div>
+    </section>
+
+    <section id="learnings">
+      <div class="container">
+        <div class="section-heading">
+          <span class="kicker">07 / Lessons learned</span>
+          <h2>What the project taught me</h2>
+          <p>
+            Building and troubleshooting the environment was part of the learning
+            process, especially when expected telemetry did not appear.
+          </p>
+        </div>
+
+        <div class="challenge-list">
+          <div class="challenge">
+            <strong>Virtual machine resources</strong>
+            <p>
+              Running multiple operating systems required careful allocation of
+              disk space and memory. A stable lab depends on balancing resources
+              across the host and guest machines.
+            </p>
+          </div>
+
+          <div class="challenge">
+            <strong>Windows domain requirements</strong>
+            <p>
+              Domain joining required a compatible Windows edition and correct
+              network and DNS configuration. Connectivity problems need to be
+              separated from authentication problems.
+            </p>
+          </div>
+
+          <div class="challenge">
+            <strong>RDP testing reliability</strong>
+            <p>
+              Different testing clients did not behave identically. A failed
+              connection attempt must be distinguished from a confirmed
+              authentication failure in the logs.
+            </p>
+          </div>
+
+          <div class="challenge">
+            <strong>Telemetry validation</strong>
+            <p>
+              Executing a test is only one part of a detection workflow. The
+              next steps are to verify audit policy, event sources, forwarding,
+              ingestion, timestamps and the actual fields indexed by Splunk.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="credits">
+      <div class="container">
+        <div class="section-heading">
+          <span class="kicker">08 / Credits and references</span>
+          <h2>Learning from the community</h2>
+          <p>
+            This project was developed as a hands-on learning exercise,
+            supported by public learning resources and community tooling.
+          </p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <div class="icon">📚</div>
+            <h3>Steven Mah</h3>
+            <p>
+              Learning resource and inspiration for building and understanding
+              Active Directory security lab environments.
+            </p>
+            <div class="tag-list">
+              <a class="tag" href="https://www.youtube.com/"
+                 target="_blank" rel="noopener noreferrer">YouTube</a>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="icon">🛡️</div>
+            <h3>myDFIR</h3>
+            <p>
+              Practical learning resources around security monitoring,
+              detection engineering and hands-on lab building.
+            </p>
+            <div class="tag-list">
+              <a class="tag" href="https://www.youtube.com/@myDFIR"
+                 target="_blank" rel="noopener noreferrer">YouTube channel</a>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="icon">⚙️</div>
+            <h3>Open-source tooling</h3>
+            <p>
+              The lab also used Sysmon configuration resources and Atomic Red
+              Team tests. Refer to each project's own documentation and license.
+            </p>
+            <div class="tag-list">
+              <a class="tag"
+                 href="https://github.com/olafhartong/sysmon-modular"
+                 target="_blank" rel="noopener noreferrer">Sysmon Modular</a>
+              <a class="tag"
+                 href="https://github.com/redcanaryco/atomic-red-team"
+                 target="_blank" rel="noopener noreferrer">Atomic Red Team</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="cta">
+          <div>
+            <h2>Explore the project in detail.</h2>
+            <p>
+              Visit the repository for project documentation, screenshots
+              and implementation notes.
+            </p>
+          </div>
+          <a class="button primary"
+             href="https://github.com/yasheesh10/Active-Directory-Splunk"
+             target="_blank" rel="noopener noreferrer">
+            Open GitHub repository ↗
+          </a>
+        </div>
+
+        <div class="note">
+          <strong>Disclaimer:</strong> This is a static educational portfolio.
+          It does not connect to a live Splunk instance, Active Directory
+          domain or any running virtual machine. Testing was intended for an
+          isolated lab environment. No live organisational systems are assessed
+          or exposed by this website.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span>Active Directory + Splunk Cybersecurity Lab</span>
+      <span>Built for learning, investigation and documentation.</span>
+    </div>
+  </footer>
+
+  <div class="lightbox" id="lightbox" role="dialog"
+       aria-label="Expanded screenshot" aria-modal="true">
+    <button type="button" id="closeLightbox" aria-label="Close image">✕ Close</button>
+    <img id="lightboxImage" src="" alt="">
+  </div>
+
+  <script>
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImage = document.getElementById("lightboxImage");
+    const closeButton = document.getElementById("closeLightbox");
+
+    document.querySelectorAll(".shot img, .architecture img").forEach((img) => {
+      img.addEventListener("click", () => {
+        lightboxImage.src = img.src;
+        lightboxImage.alt = img.alt;
+        lightbox.classList.add("open");
+      });
+    });
+
+    function closeLightbox() {
+      lightbox.classList.remove("open");
+      lightboxImage.src = "";
+    }
+
+    closeButton.addEventListener("click", closeLightbox);
+
+    lightbox.addEventListener("click", (event) => {
+      if (event.target === lightbox) closeLightbox();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeLightbox();
+    });
+  </script>
+</body>
+</html>
